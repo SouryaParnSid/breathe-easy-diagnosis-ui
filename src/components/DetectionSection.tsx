@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import FileUpload from './FileUpload';
 import ProcessingAnimation from './ProcessingAnimation';
 import ResultsPanel from './ResultsPanel';
-import { ApiService, checkBackendHealth } from '../lib/api';
+import { ApiService, checkBackendHealth } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 
 const DetectionSection = () => {

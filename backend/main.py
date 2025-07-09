@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import torch
 import torch.nn as nn
@@ -7,7 +7,7 @@ from PIL import Image
 import io
 import os
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='../dist', static_url_path='')
 
 # Configure CORS properly for production
 import os
@@ -105,7 +105,11 @@ transform = transforms.Compose([
 @app.route('/')
 def home():
     try:
-        # Verify model is loaded
+        # Check if we're in production (serving frontend)
+        if os.path.exists('../dist/index.html'):
+            return send_from_directory('../dist', 'index.html')
+        
+        # Fallback to API response if frontend not built
         if model is None:
             raise RuntimeError("Model not loaded")
             
@@ -119,6 +123,28 @@ def home():
         })
     except Exception as e:
         print(f"Error in home endpoint: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/health')
+def api_health():
+    """API health check endpoint"""
+    try:
+        if model is None:
+            raise RuntimeError("Model not loaded")
+            
+        return jsonify({
+            'status': 'ok',
+            'message': 'Pneumonia Detection API is running',
+            'model_loaded': True,
+            'endpoints': {
+                '/predict': 'POST - Make pneumonia predictions from chest X-ray images'
+            }
+        })
+    except Exception as e:
+        print(f"Error in health endpoint: {str(e)}")
         return jsonify({
             'status': 'error',
             'message': str(e)
