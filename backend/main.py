@@ -12,10 +12,17 @@ app = Flask(__name__, static_folder='../dist', static_url_path='')
 # Configure CORS properly for production
 import os
 allowed_origins = os.environ.get('ALLOWED_ORIGINS', '*')
-if allowed_origins == '*':
-    CORS(app, origins=['*'], methods=['GET', 'POST', 'OPTIONS'], allow_headers=['Content-Type'])
-else:
-    CORS(app, origins=allowed_origins.split(','), methods=['GET', 'POST', 'OPTIONS'], allow_headers=['Content-Type'])
+def get_allowed_origins():
+    origins = set()
+    if allowed_origins == '*':
+        origins.add('*')
+    else:
+        for origin in allowed_origins.split(','):
+            origins.add(origin.strip())
+    # Always include the deployed frontend URL
+    origins.add('https://breathe-easy-ui.onrender.com')
+    return list(origins)
+CORS(app, origins=get_allowed_origins(), methods=['GET', 'POST', 'OPTIONS'], allow_headers=['Content-Type'])
 
 # Enable debug mode only in development
 app.debug = os.environ.get('FLASK_ENV') == 'development'
