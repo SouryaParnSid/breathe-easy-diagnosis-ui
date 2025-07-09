@@ -186,7 +186,6 @@ Pull requests are welcome! For major changes, open an issue first to discuss wha
 
 - **Author:** Sourya Sarkar
 - **Email:** souryasarkar2003@gmail.com
-- **GitHub:** [yourusername](https://github.com/yourusername)
 
 ---
 
