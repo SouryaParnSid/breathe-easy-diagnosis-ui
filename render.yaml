@@ -1,0 +1,25 @@
+services:
+  # Backend service (must be deployed first)
+  - type: web
+    name: breathe-easy-api
+    env: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: ALLOWED_ORIGINS
+        value: https://breathe-easy-ui.onrender.com
+
+  # Frontend service (depends on backend)
+  - type: web
+    name: breathe-easy-ui
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_BACKEND_URL
+        fromService:
+          name: breathe-easy-api
+          type: web
+          property: url

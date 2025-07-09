@@ -1,14 +1,36 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import FileUpload from './FileUpload';
 import ProcessingAnimation from './ProcessingAnimation';
 import ResultsPanel from './ResultsPanel';
+import { ApiService, checkBackendHealth } from '../lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 const DetectionSection = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<any>(null);
   const [imageUrl, setImageUrl] = useState<string>('');
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
+  const { toast } = useToast();
+
+  // Check backend health on component mount
+  useEffect(() => {
+    const checkHealth = async () => {
+      const isHealthy = await checkBackendHealth();
+      setBackendStatus(isHealthy ? 'connected' : 'disconnected');
+      
+      if (!isHealthy) {
+        toast({
+          title: "Backend Connection Error",
+          description: "Unable to connect to the AI analysis service. Please ensure the backend server is running.",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    checkHealth();
+  }, [toast]);
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
@@ -19,23 +41,46 @@ const DetectionSection = () => {
     setImageUrl(url);
   };
 
-  const startAnalysis = () => {
+  const startAnalysis = async () => {
     if (!selectedFile) return;
+    
+    if (backendStatus !== 'connected') {
+      toast({
+        title: "Backend Not Available",
+        description: "Please ensure the backend server is running before starting analysis.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsProcessing(true);
     
-    // Simulate AI processing
-    setTimeout(() => {
-      // Mock results - in a real app, this would come from your AI backend
-      const mockResults = {
-        probability: Math.random() > 0.5 ? Math.floor(Math.random() * 30) + 70 : Math.floor(Math.random() * 40) + 10,
-        confidence: Math.floor(Math.random() * 15) + 85,
-        diagnosis: Math.random() > 0.3 ? 'normal' : 'pneumonia'
+    try {
+      const predictionData = await ApiService.predictPneumonia(selectedFile);
+      
+      // Transform backend response to match our UI's expected format
+      const results = {
+        probability: predictionData.confidence,
+        confidence: predictionData.confidence,
+        diagnosis: predictionData.prediction.toLowerCase()
       };
       
-      setResults(mockResults);
+      setResults(results);
+      
+      toast({
+        title: "Analysis Complete",
+        description: `Analysis completed successfully. Confidence: ${predictionData.confidence.toFixed(1)}%`,
+      });
+    } catch (error) {
+      console.error('Error during analysis:', error);
+      toast({
+        title: "Analysis Failed",
+        description: error instanceof Error ? error.message : "An unexpected error occurred during analysis.",
+        variant: "destructive",
+      });
+    } finally {
       setIsProcessing(false);
-    }, 5000);
+    }
   };
 
   const resetAnalysis = () => {
@@ -58,6 +103,18 @@ const DetectionSection = () => {
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Upload your CT scan image and let our advanced AI analyze it for signs of pneumonia
           </p>
+          
+          {/* Backend Status Indicator */}
+          <div className="mt-4 flex items-center justify-center gap-2">
+            <div className={`w-3 h-3 rounded-full ${
+              backendStatus === 'connected' ? 'bg-green-500' :
+              backendStatus === 'disconnected' ? 'bg-red-500' : 'bg-yellow-500'
+            }`} />
+            <span className="text-sm text-muted-foreground">
+              {backendStatus === 'connected' ? 'AI Service Connected' :
+               backendStatus === 'disconnected' ? 'AI Service Disconnected' : 'Checking Connection...'}
+            </span>
+          </div>
         </div>
 
         <div className="space-y-8">
